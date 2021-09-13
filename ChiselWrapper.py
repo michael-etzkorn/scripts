@@ -103,7 +103,7 @@ def main():
                     minus_idx = port.data_type.find("-")
                     f.write(f"\t val {port.name} = {direction}(UInt(({port.data_type[start:minus_idx]}).W))\n")
                 else: 
-                    f.write(f"\t val {port.name} = {direction}(UInt({abs(int(msb) - int(lsb) + 1)}.W))\n")
+                    f.write(f"\t val {port.name} = {direction}(UInt({abs(int(msb) - int(lsb)) + 1}.W))\n")
         f.write("\n}\n")
         f.write(f"trait Has{given_class_name}IO extends BaseModule {{\n")
         pass_arg = ""
