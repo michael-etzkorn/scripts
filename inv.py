@@ -7,7 +7,7 @@ def get_lines(path):
 
 
 if __name__ == "__main__":
-    path = r"C:\Users\team\Documents\SageProjects\nfc.Dev\verif\dut\ldpc.text"
+    path = r""
     lines = get_lines(path)
     invd_matrix = lines[8]
     invd_matrix = invd_matrix.replace(', ', ',\n ')
