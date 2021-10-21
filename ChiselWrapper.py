@@ -1,19 +1,24 @@
 import hdlparse.verilog_parser as vlog 
-
+import sys 
 
 
 def main():
-    fname = ""                         # Insert your file name here TODO: move this to command line
+    #fname = sys.argv[1]
+    #if not sys.argv[1]:
+    #   print("Supply a filename from the command line")
+    #   return
+    # TODO: handle parsing file name better for cases where its from a directory 
+    fname = "shim_fifo_v2_wrapper.sv"                         # Insert your file name here TODO: move this to command line
     vlog_ex = vlog.VerilogExtractor()
-    vlog_mods = vlog_ex.extract_objects(fname)
+    vlog_mods = vlog_ex.extract_objects("verilog2chisel/" + fname)
     fname_noext = fname.split(".")[0]  # assumes file name does not contain "." outside of ".v" or ".sv"
     mod = vlog_mods[0]                 # assumes file contains only a top level module (unclear on how Chisel's Blackbox API handles multiple modules in top)
 
-    with open(f"{fname_noext}.scala", "w") as f:
+    with open(f"verilog2chisel/{fname_noext}.scala", "w") as f:
         f.write("// package ReplaceMe\n")
         f.write("import chisel3._ \n")
         f.write("import chisel3.util._ \n")
-        f.write("import chisel3.experimental.{IntParam, BaseModule}\n")
+        f.write("import chisel3.experimental.{IntParam, StringParam, BaseModule}\n") # Could probably import on an "as needed" basis for Params.
 
         if mod.generics: # Parameters exist
             f.write(f"case class {fname_noext}Params(\n")
@@ -26,12 +31,18 @@ def main():
                 if param == mod.generics[-1]: 
                     comma = ""         # No comma for last parameter
                 param_value = param.default_value 
+                isString    = param_value.find('"')
+
                 h_index     = param_value.find('h')
-                if h_index != -1:      # Hex number - Set 0x and L prefix and suffix - Use BigInt. 
+                if isString != -1:
+                    param_scaltype = "String"
+                elif h_index != -1:      # Hex number - Set 0x and L prefix and suffix - Use BigInt. 
                     param_scaltype = "BigInt" 
                     use_x = "0x"
                     use_L = "L"
                     param_value = param_value[h_index + 1:]
+                
+                
                 f.write(f"\t{param.name}: {param_scaltype} = {use_x}{param_value}{use_L}{comma}\n")
             f.write(")\n\n")
 
@@ -43,7 +54,10 @@ def main():
                 comma = ","
                 if param == mod.generics[-1]:
                     comma = ""
-                f.write(f"\t\"{param.name}\" -> IntParam(c.{param.name}){comma}\n") # NOTE: if we convert name from snake_case to camelCase, this line needs to change
+                if paramdefault_value.find('"') == -1:
+                    f.write(f"\t\"{param.name}\" -> IntParam(c.{param.name}){comma}\n") # NOTE: if we convert name from snake_case to camelCase, this line needs to change
+                else:
+                    f.write(f"\t\"{param.name}\" -> StringParam(c.{param.name}){comma}\n)
             f.write("))")
         else:  
             f.write(f"class {fname_noext} extends BlackBox")
@@ -57,9 +71,9 @@ def main():
 
         # Process ports
         if mod.generics:
-            f.write(f"class {fname_noext}(val c: {fname_noext}Params) extends Bundle{{\n")
+            f.write(f"class {fname_noext}IO(val c: {fname_noext}Params) extends Bundle{{\n")
         else: 
-            f.write(f"class {fname_noext} extends Bundle{{\n")
+            f.write(f"class {fname_noext}IO extends Bundle{{\n")
         
         # NOTE: The snake_case to camelCase idea is tricky here. We need to parse for param names within the data_type then call a function to convert to camelCase. 
         # WARNING: This assumes clock and resets have clk and rst in their name. They don't always. Double check input file and output file for correct clock reset names.
