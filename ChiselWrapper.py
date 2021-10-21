@@ -8,13 +8,13 @@ def main():
     #   print("Supply a filename from the command line")
     #   return
     # TODO: handle parsing file name better for cases where its from a directory 
-    fname = "shim_fifo_v2_wrapper.sv"                         # Insert your file name here TODO: move this to command line
+    fname = ""                         # Insert your file name here TODO: move this to command line
     vlog_ex = vlog.VerilogExtractor()
     vlog_mods = vlog_ex.extract_objects("verilog2chisel/" + fname)
     fname_noext = fname.split(".")[0]  # assumes file name does not contain "." outside of ".v" or ".sv"
     mod = vlog_mods[0]                 # assumes file contains only a top level module (unclear on how Chisel's Blackbox API handles multiple modules in top)
 
-    with open(f"verilog2chisel/{fname_noext}.scala", "w") as f:
+    with open(f"{fname_noext}.scala", "w") as f:
         f.write("// package ReplaceMe\n")
         f.write("import chisel3._ \n")
         f.write("import chisel3.util._ \n")
