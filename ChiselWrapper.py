@@ -8,7 +8,8 @@ def main():
     #   print("Supply a filename from the command line")
     #   return
     # TODO: handle parsing file name better for cases where its from a directory 
-    fname = "shim_fifo_v2_wrapper.sv"                         # Insert your file name here TODO: move this to command line
+      # Insert your file name here TODO: move this to command line
+    fname = "shim_fifo_v2_wrapper.sv"                       
     vlog_ex = vlog.VerilogExtractor()
     vlog_mods = vlog_ex.extract_objects("verilog2chisel/" + fname)
     fname_noext = fname.split(".")[0]  # assumes file name does not contain "." outside of ".v" or ".sv"
