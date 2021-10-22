@@ -8,27 +8,34 @@ def main():
     #   print("Supply a filename from the command line")
     #   return
     # TODO: handle parsing file name better for cases where its from a directory 
-      # Insert your file name here TODO: move this to command line
-    fname = "shim_fifo_v2_wrapper.sv"                       
+    # Insert your file name here TODO: move this to command line
+    fname = ""                        
     vlog_ex = vlog.VerilogExtractor()
     vlog_mods = vlog_ex.extract_objects("verilog2chisel/" + fname)
-    fname_noext = fname.split(".")[0]  # assumes file name does not contain "." outside of ".v" or ".sv"
-    mod = vlog_mods[0]                 # assumes file contains only a top level module (unclear on how Chisel's Blackbox API handles multiple modules in top)
+    # assumes file name does not contain "." outside of ".v" or ".sv"
+    fname_noext = fname.split(".")[0]  
+    # assumes file contains only a top level module (unclear on how Chisel's Blackbox API handles multiple modules in top)
+    mod = vlog_mods[0]                 
 
-    with open(f"verilog2chisel/{fname_noext}.scala", "w") as f:
+    with open(f"{fname_noext}.scala", "w") as f:
         f.write("// package ReplaceMe\n")
         f.write("import chisel3._ \n")
         f.write("import chisel3.util._ \n")
-        f.write("import chisel3.experimental.{IntParam, StringParam, BaseModule}\n") # Could probably import on an "as needed" basis for Params.
+        # Could probably import on an "as needed" basis for Params.
+        f.write("import chisel3.experimental.{IntParam, StringParam, BaseModule}\n") 
 
         if mod.generics: # Parameters exist
             f.write(f"case class {fname_noext}Params(\n")
-            for param in mod.generics: # TODO: A conversion of snake case to camel case for param names would be good for the Scala syntax tool, but shouldn't affect compilation
+            # TODO: A conversion of snake case to camel case for param names would be good for the Scala syntax tool.
+            # Shouldn't affect compilation
+            for param in mod.generics:
                 param_scaltype = "Int" 
                 use_x = ""
                 use_L = ""
                 comma = ","
-                #if param == next(reversed(mod.generics)) # I thought mod.generics was an ordered dict. Not sure if a list is worse for run time or not. Something to look into if improving/maintaing hdlparse at all
+                #if param == next(reversed(mod.generics))
+             # I thought mod.generics was an ordered dict. 
+             # Not sure if a list is worse for run time or not. Something to look into.
                 if param == mod.generics[-1]: 
                     comma = ""         # No comma for last parameter
                 param_value = param.default_value 
@@ -48,15 +55,16 @@ def main():
             f.write(")\n\n")
 
                 
-
-            f.write(f"class {fname_noext}(val c: {fname_noext}Params) extends BlackBox(Map(\n") # Probably a way to inline a conditional concatenation of (val c: NameParams)
+            # Probably a way to inline a conditional concatenation of (val c: NameParams)
+            f.write(f"class {fname_noext}(val c: {fname_noext}Params) extends BlackBox(Map(\n") 
             
             for param in mod.generics: 
                 comma = ","
                 if param == mod.generics[-1]:
                     comma = ""
                 if paramdefault_value.find('"') == -1:
-                    f.write(f"\t\"{param.name}\" -> IntParam(c.{param.name}){comma}\n") # NOTE: if we convert name from snake_case to camelCase, this line needs to change
+                    # NOTE: if we convert name from snake_case to camelCase, this line needs to change
+                    f.write(f"\t\"{param.name}\" -> IntParam(c.{param.name}){comma}\n") 
                 else:
                     f.write(f"\t\"{param.name}\" -> StringParam(c.{param.name}){comma}\n)
             f.write("))")
@@ -65,8 +73,9 @@ def main():
         f.write(f" with HasBlackBoxResource with Has{fname_noext}IO\n")
         f.write("{\n")
 
-         # TODO: Refactor to allow a directory to be given containing all files to be included with option of placing under directory name
-        f.write(f"\taddResource(\"/vsrc/{fname}\")\n") # If contained within a folder with other necessary modules. These will need to be added manually. Unless we do something clever.
+        # TODO: Refactor to allow a directory to be given containing all files to be included with option of placing under directory name
+        # If contained within a folder with other necessary modules. These will need to be added manually. Unless we do something clever.
+        f.write(f"\taddResource(\"/vsrc/{fname}\")\n") 
         f.write("// IF YOU HAVE MORE RESOURCES ADD THEM HERE \n")
         f.write("}\n")
 
@@ -77,7 +86,8 @@ def main():
             f.write(f"class {fname_noext}IO extends Bundle{{\n")
         
         # NOTE: The snake_case to camelCase idea is tricky here. We need to parse for param names within the data_type then call a function to convert to camelCase. 
-        # WARNING: This assumes clock and resets have clk and rst in their name. They don't always. Double check input file and output file for correct clock reset names.
+        # WARNING: This assumes clock and resets have clk and rst in their name. 
+        # They don't always. Double check input file and output file for correct clock reset names.
         for port in mod.ports:
             direction = ""
             if port.mode == "input":
@@ -107,7 +117,8 @@ def main():
                 if end == -1:
                     f.write(f"\t val {port.name} = {direction}(Bool())\n")
                 elif msb_param_flag:
-                    # WARNING: I just assume param math is followed by minus one because that's usually the case and it's easier to find "-" than parse a parameter name
+                    # WARNING: I just assume param math is followed by minus one because that's usually the case.
+                    # It's easier to find "-" than reparse a parameter name
                     minus_idx = port.data_type.find("-")
                     f.write(f"\t val {port.name} = {direction}(UInt(({port.data_type[start:minus_idx]}).W))\n")
                 else: 
