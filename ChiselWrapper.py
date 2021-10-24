@@ -62,11 +62,11 @@ def main():
                 comma = ","
                 if param == mod.generics[-1]:
                     comma = ""
-                if paramdefault_value.find('"') == -1:
+                if param.default_value.find('"') == -1:
                     # NOTE: if we convert name from snake_case to camelCase, this line needs to change
                     f.write(f"\t\"{param.name}\" -> IntParam(c.{param.name}){comma}\n") 
                 else:
-                    f.write(f"\t\"{param.name}\" -> StringParam(c.{param.name}){comma}\n)
+                    f.write(f"\t\"{param.name}\" -> StringParam(c.{param.name}){comma}\n")
             f.write("))")
         else:  
             f.write(f"class {fname_noext} extends BlackBox")
