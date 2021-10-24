@@ -4,4 +4,4 @@
   - [ ] If the connections are AXI, making the aw, ar, b, r, and w connections to an AXI Master/Slave node 
 - [ ] Script to control VCS runs from python shell. 
 ### `ChiselWrapper.py`
-- Currently supported by [this fork](https://github.com/zhelnio/hdlparse) of HDLParse. 
+- Currently supported by [this fork](https://github.com/hdl/pyhdlparser) of HDLParse. 
