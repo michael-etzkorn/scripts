@@ -3,18 +3,17 @@ import sys
 
 
 def main():
-    #fname = sys.argv[1]
-    #if not sys.argv[1]:
-    #   print("Supply a filename from the command line")
-    #   return
-    # TODO: handle parsing file name better for cases where its from a directory 
-    # Insert your file name here TODO: move this to command line
-    fname = ""                        
+    #todo: option args for supplying location of resources.
+    fname = sys.argv[1]
+    if not sys.argv[1]:
+      print("Supply a filename from the command line")
+      return
+                      
     vlog_ex = vlog.VerilogExtractor()
-    vlog_mods = vlog_ex.extract_objects("verilog2chisel/" + fname)
-    # assumes file name does not contain "." outside of ".v" or ".sv"
-    fname_noext = fname.split(".")[0]  
-    # assumes file contains only a top level module (unclear on how Chisel's Blackbox API handles multiple modules in top)
+    vlog_mods = vlog_ex.extract_objects(fname)
+    # assumes directory path name does not contain "." outside of ".v" or ".sv"
+    fname_noext = fname.split(".")[0].split("/")[-1]
+    # assumes file's first module declaration is top level
     mod = vlog_mods[0]                 
 
     with open(f"{fname_noext}.scala", "w") as f:
@@ -73,8 +72,10 @@ def main():
         f.write(f" with HasBlackBoxResource with Has{fname_noext}IO\n")
         f.write("{\n")
 
-        # TODO: Refactor to allow a directory to be given containing all files to be included with option of placing under directory name
-        # If contained within a folder with other necessary modules. These will need to be added manually. Unless we do something clever.
+        # TODO: Refactor to allow a directory to be given containing all files to be included 
+        #         with option of placing under directory name
+        # If contained within a folder with other necessary modules. These will need to be added manually. 
+        # Unless we do something clever.
         f.write(f"\taddResource(\"/vsrc/{fname}\")\n") 
         f.write("// IF YOU HAVE MORE RESOURCES ADD THEM HERE \n")
         f.write("}\n")
@@ -85,7 +86,8 @@ def main():
         else: 
             f.write(f"class {fname_noext}IO extends Bundle{{\n")
         
-        # NOTE: The snake_case to camelCase idea is tricky here. We need to parse for param names within the data_type then call a function to convert to camelCase. 
+        # NOTE: The snake_case to camelCase idea is tricky here.
+        # We need to parse for param names within the data_type then call a function to convert to camelCase. 
         # WARNING: This assumes clock and resets have clk and rst in their name. 
         # They don't always. Double check input file and output file for correct clock reset names.
         for port in mod.ports:
@@ -112,17 +114,22 @@ def main():
 
                 lsb = port.data_type[middle+1:end].replace(" ", "")
                 msb_param_flag = any(c.isalpha() for c in msb)
-                # lsb_param_flag = any(c.isalpha() for c in lsb)      # TODO: Support param in second half
-                                      
+                # lsb_param_flag = any(c.isalpha() for c in lsb)      # TODO: Support param in second half        
                 if end == -1:
                     f.write(f"\t val {port.name} = {direction}(Bool())\n")
                 elif msb_param_flag:
                     # WARNING: I just assume param math is followed by minus one because that's usually the case.
                     # It's easier to find "-" than reparse a parameter name
                     minus_idx = port.data_type.find("-")
-                    f.write(f"\t val {port.name} = {direction}(UInt(({port.data_type[start:minus_idx]}).W))\n")
+                    if direction == "Analog":
+                        f.write(f"\t val {port.name} = {direction}((c.{port.data_type[start:minus_idx]}).W)\n")
+                    else: 
+                        f.write(f"\t val {port.name} = {direction}(UInt((c.{port.data_type[start:minus_idx]}).W))\n")
                 else: 
-                    f.write(f"\t val {port.name} = {direction}(UInt({abs(int(msb) - int(lsb)) + 1}.W))\n")
+                    if direction == "Analog":
+                        f.write(f"\t val {port.name} = {direction}({abs(int(msb) - int(lsb)) + 1}.W)\n")
+                    else: 
+                        f.write(f"\t val {port.name} = {direction}(UInt({abs(int(msb) - int(lsb)) + 1}.W))\n")
         f.write("\n}\n")
         f.write(f"trait Has{fname_noext}IO extends BaseModule {{\n")
         pass_arg = ""
