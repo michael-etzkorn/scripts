@@ -88,7 +88,7 @@ def main():
         
         # NOTE: The snake_case to camelCase idea is tricky here.
         # We need to parse for param names within the data_type then call a function to convert to camelCase. 
-        # WARNING: This assumes clock and resets have clk and rst in their name. 
+        # WARNING: This assumes clocks have clk (or clock) in their name. 
         # They don't always. Double check input file and output file for correct clock reset names.
         for port in mod.ports:
             direction = ""
@@ -98,7 +98,7 @@ def main():
                 direction = "Output"
             else: 
                 direction = "Analog" # I assume "inout" is the only other type
-            if "clk" in port.name:
+            if "clk" in port.name or "clock" in port.name:
                 f.write(f"\t val {port.name} = {direction}(Clock())\n")
             else:
                 # process datatype
