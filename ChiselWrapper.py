@@ -76,7 +76,7 @@ def main():
         #         with option of placing under directory name
         # If contained within a folder with other necessary modules. These will need to be added manually. 
         # Unless we do something clever.
-        f.write(f"\taddResource(\"/vsrc/{fname}\")\n") 
+        f.write(f"\taddResource(\"./vsrc/{fname}\")\n") 
         f.write("// IF YOU HAVE MORE RESOURCES ADD THEM HERE \n")
         f.write("}\n")
 
