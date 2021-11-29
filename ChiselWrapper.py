@@ -12,6 +12,7 @@ def main():
     vlog_ex = vlog.VerilogExtractor()
     vlog_mods = vlog_ex.extract_objects(fname)
     # assumes directory path name does not contain "." outside of ".v" or ".sv"
+    #TODO: use pathlib? 
     fname_noext = fname.split(".")[0].split("/")[-1]
     # assumes file's first module declaration is top level
     mod = vlog_mods[0]                 
@@ -32,9 +33,7 @@ def main():
                 use_x = ""
                 use_L = ""
                 comma = ","
-                #if param == next(reversed(mod.generics))
-             # I thought mod.generics was an ordered dict. 
-             # Not sure if a list is worse for run time or not. Something to look into.
+
                 if param == mod.generics[-1]: 
                     comma = ""         # No comma for last parameter
                 param_value = param.default_value 
@@ -124,6 +123,7 @@ def main():
                 elif msb_param_flag:
                     # WARNING: I just assume param math is followed by minus one because that's usually the case.
                     # It's easier to find "-" than reparse a parameter name
+                    # TODO: should check for $clog2 and replace with log2Ceil
                     minus_idx = port.data_type.find("-")
                     if direction == "Analog":
                         f.write(f"\t val {port.name} = {direction}((c.{port.data_type[start:minus_idx]}).W)\n")
