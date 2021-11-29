@@ -105,7 +105,8 @@ def main():
                 # TODO: add multidimension port support
                 # TODO: don't assume msb:lsb 
                 # TODO: don't assume (param math) - 1 for msb
-                # TODO: support for structs ?  - I don't know how that works in chisel 
+                # TODO: support for structs ?
+                    # Need a script to wrap verilog in struct-free verilog. 
 
                 start = port.data_type.find("[") + 1
                 middle = port.data_type.find(":")
@@ -116,7 +117,10 @@ def main():
                 msb_param_flag = any(c.isalpha() for c in msb)
                 # lsb_param_flag = any(c.isalpha() for c in lsb)      # TODO: Support param in second half        
                 if end == -1:
-                    f.write(f"\t val {port.name} = {direction}(Bool())\n")
+                    if direction == "Analog": 
+                        f.write(f"\t val {port.name} = {direction}(1.W)\n")
+                    else: 
+                        f.write(f"\t val {port.name} = {direction}(Bool())\n")
                 elif msb_param_flag:
                     # WARNING: I just assume param math is followed by minus one because that's usually the case.
                     # It's easier to find "-" than reparse a parameter name
