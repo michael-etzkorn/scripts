@@ -1,10 +1,16 @@
 import hdlparse.verilog_parser as vlog 
 import sys 
 
+def snake_to_camel(name):
+    name = ''.join(word.title() for word in name.split('_')) 
+    return name 
 
 def main():
     #todo: option args for supplying location of resources.
     fname = sys.argv[1]
+    package_name = []
+    if len(sys.argv) == 3:
+        package_name = sys.argv[2]
     if not sys.argv[1]:
       print("Supply a filename from the command line")
       return
@@ -15,17 +21,22 @@ def main():
     #TODO: use pathlib? 
     fname_noext = fname.split(".")[0].split("/")[-1]
     # assumes file's first module declaration is top level
-    mod = vlog_mods[0]                 
+    mod = vlog_mods[0]              
+    camelMod = snake_to_camel(mod.name.title())
+       
 
-    with open(f"{fname_noext}.scala", "w") as f:
-        f.write("// package ReplaceMe\n")
+    with open(f"verilog2chisel/{fname_noext}.scala", "w") as f:
+        if not package_name: 
+            f.write("// package ReplaceMe\n")
+        else: 
+            f.write(f"package {package_name}")
         f.write("import chisel3._ \n")
         f.write("import chisel3.util._ \n")
         # Could probably import on an "as needed" basis for Params.
         f.write("import chisel3.experimental.{IntParam, StringParam, BaseModule}\n") 
 
         if mod.generics: # Parameters exist
-            f.write(f"case class {fname_noext}Params(\n")
+            f.write(f"case class {camelMod}Params(\n")
             # TODO: A conversion of snake case to camel case for param names would be good for the Scala syntax tool.
             # Shouldn't affect compilation
             for param in mod.generics:
@@ -48,27 +59,28 @@ def main():
                     use_L = "L"
                     param_value = param_value[h_index + 1:]
                 
-                
-                f.write(f"\t{param.name}: {param_scaltype} = {use_x}{param_value}{use_L}{comma}\n")
+                camelParam = snake_to_camel(param.name)
+                f.write(f"\t{camelParam}: {param_scaltype} = {use_x}{param_value}{use_L}{comma}\n")
             f.write(")\n\n")
 
                 
             # Probably a way to inline a conditional concatenation of (val c: NameParams)
-            f.write(f"class {fname_noext}(val c: {fname_noext}Params) extends BlackBox(Map(\n") 
+            f.write(f"class {mod.name}(val c: {camelMod}Params) extends BlackBox(Map(\n") 
             
             for param in mod.generics: 
+                camelParam = snake_to_camel(param.name)
                 comma = ","
                 if param == mod.generics[-1]:
                     comma = ""
                 if param.default_value.find('"') == -1:
                     # NOTE: if we convert name from snake_case to camelCase, this line needs to change
-                    f.write(f"\t\"{param.name}\" -> IntParam(c.{param.name}){comma}\n") 
+                    f.write(f"\t\"{camelParam}\" -> IntParam(c.{camelParam}){comma}\n") 
                 else:
-                    f.write(f"\t\"{param.name}\" -> StringParam(c.{param.name}){comma}\n")
+                    f.write(f"\t\"{camelParam}\" -> StringParam(c.{camelParam}){comma}\n")
             f.write("))")
         else:  
-            f.write(f"class {fname_noext} extends BlackBox")
-        f.write(f" with HasBlackBoxResource with Has{fname_noext}IO\n")
+            f.write(f"class {mod.name} extends BlackBox")
+        f.write(f" with HasBlackBoxResource with Has{camelMod}IO\n")
         f.write("{\n")
 
         # TODO: Refactor to allow a directory to be given containing all files to be included 
@@ -81,12 +93,10 @@ def main():
 
         # Process ports
         if mod.generics:
-            f.write(f"class {fname_noext}IO(val c: {fname_noext}Params) extends Bundle{{\n")
+            f.write(f"class {camelMod}IO(val c: {camelMod}Params) extends Bundle{{\n")
         else: 
-            f.write(f"class {fname_noext}IO extends Bundle{{\n")
+            f.write(f"class {camelMod}IO extends Bundle{{\n")
         
-        # NOTE: The snake_case to camelCase idea is tricky here.
-        # We need to parse for param names within the data_type then call a function to convert to camelCase. 
         # WARNING: This assumes clocks have clk (or clock) in their name. 
         # They don't always. Double check input file and output file for correct clock reset names.
         for port in mod.ports:
@@ -114,7 +124,8 @@ def main():
 
                 lsb = port.data_type[middle+1:end].replace(" ", "")
                 msb_param_flag = any(c.isalpha() for c in msb)
-                # lsb_param_flag = any(c.isalpha() for c in lsb)      # TODO: Support param in second half        
+                # lsb_param_flag = any(c.isalpha() for c in lsb)      # TODO: Support param in second half     
+                # portCamel = snake_to_camel(port.name)   
                 if end == -1:
                     if direction == "Analog": 
                         f.write(f"\t val {port.name} = {direction}(1.W)\n")
@@ -125,22 +136,29 @@ def main():
                     # It's easier to find "-" than reparse a parameter name
                     # TODO: should check for $clog2 and replace with log2Ceil
                     minus_idx = port.data_type.find("-")
+                    paramName = snake_to_camel(port.data_type[start:minus_idx])
+
+                    #TODO: resolve parentheses bug
+                    if paramName[0] == "(":
+                        paramName.find(")")
+
+                    
                     if direction == "Analog":
-                        f.write(f"\t val {port.name} = {direction}((c.{port.data_type[start:minus_idx]}).W)\n")
+                        f.write(f"\t val {port.name} = {direction}((c.{paramName}).W)\n")
                     else: 
-                        f.write(f"\t val {port.name} = {direction}(UInt((c.{port.data_type[start:minus_idx]}).W))\n")
+                        f.write(f"\t val {port.name} = {direction}(UInt((c.{paramName}).W))\n")
                 else: 
                     if direction == "Analog":
                         f.write(f"\t val {port.name} = {direction}({abs(int(msb) - int(lsb)) + 1}.W)\n")
                     else: 
                         f.write(f"\t val {port.name} = {direction}(UInt({abs(int(msb) - int(lsb)) + 1}.W))\n")
         f.write("\n}\n")
-        f.write(f"trait Has{fname_noext}IO extends BaseModule {{\n")
+        f.write(f"trait Has{camelMod}IO extends BaseModule {{\n")
         pass_arg = ""
         if mod.generics:
-            f.write(f"\tval c: {fname_noext}Params\n")
+            f.write(f"\tval c: {camelMod}Params\n")
             pass_arg = "(c)"
-        f.write(f"\tval io = IO(new {fname_noext}IO{pass_arg})\n")
+        f.write(f"\tval io = IO(new {camelMod}IO{pass_arg})\n")
         f.write("}")
                 
           
