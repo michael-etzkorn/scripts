@@ -25,7 +25,7 @@ def main():
     camelMod = snake_to_camel(mod.name.title())
        
 
-    with open(f"verilog2chisel/{fname_noext}.scala", "w") as f:
+    with open(f"{fname_noext}.scala", "w") as f:
         if not package_name: 
             f.write("// package ReplaceMe\n")
         else: 
