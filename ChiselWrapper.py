@@ -29,7 +29,7 @@ def main():
         if not package_name: 
             f.write("// package ReplaceMe\n")
         else: 
-            f.write(f"package {package_name}")
+            f.write(f"package {package_name}\n")
         f.write("import chisel3._ \n")
         f.write("import chisel3.util._ \n")
         # Could probably import on an "as needed" basis for Params.
