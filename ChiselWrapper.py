@@ -33,7 +33,7 @@ def main():
         f.write("import chisel3._ \n")
         f.write("import chisel3.util._ \n")
         # Could probably import on an "as needed" basis for Params.
-        f.write("import chisel3.experimental.{IntParam, StringParam, BaseModule}\n") 
+        f.write("import chisel3.experimental.{IntParam, StringParam, Analog, BaseModule}\n") 
 
         if mod.generics: # Parameters exist
             f.write(f"case class {camelMod}Params(\n")
