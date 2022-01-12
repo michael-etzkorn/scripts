@@ -7,3 +7,4 @@
 - [ ] Generate `.tex` documentation from `.anno.json` files that use Chisel's `RegField` 
 ### `ChiselWrapper.py`
 - Currently supported by [this fork](https://github.com/hdl/pyhdlparser) of HDLParse. 
+- With decent accuracy, and a few known issues, produces blackbox boilerplate collateral for Chisel RTL that interfaces with Verilog. VerilogParser's regexes can be modified to include logic in the type search for some simple SV blackbox support. 
